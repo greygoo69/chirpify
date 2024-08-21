@@ -53,56 +53,61 @@
       };
 
      
-    const mergeAudioVideo = async () => {
-      if (!selectedVideo) return;
+      const mergeAudioVideo = async () => {
+        if (!selectedVideo) return;
 
-      const message = document.getElementById('message');
-      message.innerHTML = 'Loading...';
-      await loadFFmpeg();
+        const message = document.getElementById('message');
+        message.innerHTML = 'Loading...';
+        await loadFFmpeg();
 
-      const videoFileName = 'input.mp4';
-      const audioFileName = 'input.mp3';
-      const outputFileName = 'output.mp4';
+        const videoFileName = 'input.mp4';
+        const audioFileName = 'input.mp3';
+        const outputFileName = 'output.mp4';
 
-      message.innerHTML = 'Loading files into FFmpeg...';
-      await ffmpeg.writeFile(videoFileName, await fetchFile(selectedVideo));
-      await ffmpeg.writeFile(audioFileName, await fetchFile(audioUrl));
+        message.innerHTML = 'Loading files into FFmpeg...';
+        await ffmpeg.writeFile(videoFileName, await fetchFile(selectedVideo));
+        await ffmpeg.writeFile(audioFileName, await fetchFile(audioUrl));
 
-      message.innerHTML = 'Merging audio and video...';
-      await ffmpeg.exec([
-        '-i', videoFileName,
-        '-i', audioFileName,
-        '-filter_complex', '[1:a]aloop=loop=-1:size=2e+09[a];[0:a][a]amix=inputs=2:duration=longest:dropout_transition=2[a]',
-        '-map', '0:v', '-map', '[a]',
-        '-c:v', 'copy', '-c:a', 'aac', '-strict', 'experimental',
-        '-shortest', // Ensures the output duration matches the shortest input
-        outputFileName
-      ]);
+        message.innerHTML = 'Merging audio and video...';
+        await ffmpeg.exec([
+          '-i', videoFileName,
+          '-i', audioFileName,
+          '-filter_complex', '[1:a]aloop=loop=-1:size=2e+09[a];[0:a][a]amix=inputs=2:duration=longest:dropout_transition=2[a]',
+          '-map', '0:v', '-map', '[a]',
+          '-c:v', 'copy', '-c:a', 'aac', '-strict', 'experimental',
+          '-shortest', // Ensures the output duration matches the shortest input
+          outputFileName
+        ]);
 
-      message.innerHTML = 'Reading output file...';
-      const data = await ffmpeg.readFile(outputFileName);
+        message.innerHTML = 'Reading output file...';
+        const data = await ffmpeg.readFile(outputFileName);
 
-      const video = document.getElementById('output-video');
-      const downloadButton = document.getElementById('download-button');
-      const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
-      const videoUrl = URL.createObjectURL(videoBlob);
-      
-      video.src = videoUrl;
-      video.style.display = 'block';
-      downloadButton.href = videoUrl;
-      downloadButton.download = 'merged_video.mp4';
-      downloadButton.style.display = 'inline';
-      downloadButton.addEventListener('click', () => {
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = videoUrl;
-        a.download = 'merged_video.mp4';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      });
-      message.innerHTML = ''; // Merging complete!
-    };
+        const video = document.getElementById('output-video');
+        const downloadButton = document.getElementById('download-button');
+        const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
+        const videoUrl = URL.createObjectURL(videoBlob);
+        
+        video.src = videoUrl;
+        video.style.display = 'block';
+
+        // Clone the download button to remove old event listeners
+        const newDownloadButton = downloadButton.cloneNode(true);
+        downloadButton.parentNode.replaceChild(newDownloadButton, downloadButton);
+
+        newDownloadButton.href = videoUrl;
+        newDownloadButton.download = 'merged_video.mp4';
+        newDownloadButton.style.display = 'inline';
+        newDownloadButton.addEventListener('click', () => {
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = videoUrl;
+          a.download = 'merged_video.mp4';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        });
+        message.innerHTML = ''; // Merging complete!
+      };
 
       document.getElementById('video-uploader').addEventListener('change', onFileChange);
       document.getElementById('merge-button').addEventListener('click', mergeAudioVideo);
