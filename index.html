@@ -1,0 +1,78 @@
+<html>
+  <head>
+    <link rel="stylesheet" href="style.css">
+    <script src="./assets/ffmpeg/package/dist/umd/ffmpeg.js"></script>
+    <script src="./assets/util/package/dist/umd/index.js"></script>
+  </head>
+  <body>
+    <h1>Audio-Video Merger</h1>
+    <input type="file" id="video-uploader" accept="video/*" />
+    <button id="merge-button" disabled>Merge Audio with Video</button>
+    <video id="output-video" controls></video><br/>
+    <p id="message"></p>
+    <script>
+      const { fetchFile } = FFmpegUtil;
+      const { FFmpeg } = FFmpegWASM;
+      let ffmpeg = null;
+      let selectedVideo = null;
+      const audioUrl = '/chirp.mp3'; // Update to local file path
+
+      const loadFFmpeg = async () => {
+        if (ffmpeg === null) {
+          ffmpeg = new FFmpeg();
+          ffmpeg.on("log", ({ message }) => {
+            console.log(message);
+          });
+          ffmpeg.on("progress", ({ progress }) => {
+            document.getElementById('message').innerHTML = `${progress * 100} %`;
+          });
+          await ffmpeg.load({
+            coreURL: "/assets/core/package/dist/umd/ffmpeg-core.js",
+          });
+        }
+      };
+
+      const onFileChange = async ({ target: { files } }) => {
+        selectedVideo = files[0];
+        document.getElementById('merge-button').disabled = !selectedVideo;
+      };
+
+      const mergeAudioVideo = async () => {
+        if (!selectedVideo) return;
+
+        const message = document.getElementById('message');
+        message.innerHTML = 'Loading FFmpeg...';
+        await loadFFmpeg();
+
+        const videoFileName = 'input.mp4';
+        const audioFileName = 'input.mp3';
+        const outputFileName = 'output.mp4';
+        const loopCount = 10; // Adjust this value as needed
+
+        message.innerHTML = 'Loading files into FFmpeg...';
+        await ffmpeg.writeFile(videoFileName, await fetchFile(selectedVideo));
+        await ffmpeg.writeFile(audioFileName, await fetchFile(audioUrl));
+
+        message.innerHTML = 'Merging audio and video...';
+        await ffmpeg.exec([
+          '-i', videoFileName,
+          '-stream_loop', loopCount.toString(), '-i', audioFileName,
+          '-filter_complex', '[0:a][1:a]amix=inputs=2:duration=first:dropout_transition=2[a]',
+          '-map', '0:v', '-map', '[a]',
+          '-c:v', 'copy', '-c:a', 'aac', '-strict', 'experimental',
+          outputFileName
+        ]);
+
+        message.innerHTML = 'Reading output file...';
+        const data = await ffmpeg.readFile(outputFileName);
+
+        const video = document.getElementById('output-video');
+        video.src = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+        message.innerHTML = 'Merging complete!';
+      };
+
+      document.getElementById('video-uploader').addEventListener('change', onFileChange);
+      document.getElementById('merge-button').addEventListener('click', mergeAudioVideo);
+    </script>
+  </body>
+</html>
