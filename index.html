@@ -3,14 +3,26 @@
     <link rel="stylesheet" href="style.css">
     <script src="./assets/ffmpeg/package/dist/umd/ffmpeg.js"></script>
     <script src="./assets/util/package/dist/umd/index.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        background: url(https://www.bzpower.com/uploads/monthly_2021_08/387410351_FullTeam.png.1355bdc40441152b7b83555d05ee9f78.png);
+        background-size: 50%;
+        background-repeat: no-repeat;
+        background-position-x: center;
+        background-position-y: bottom;
+      }
+    </style>
   </head>
-  <body>
-    <h1>Audio-Video Merger</h1>
-    <input type="file" id="video-uploader" accept="video/*" />
-    <button id="merge-button" disabled>Merge Audio with Video</button>
+  <body class="px-12">
+    <div class="my-2"></div>
+    <h1 class="font-bold text-4xl my-4">Chirpify</h1>
+    <p class="text-gray-500">Easily add smoke detector chirps to any video. Simply select your video below to get started!</p>
+    <input type="file" id="video-uploader" accept="video/*" class="my-4" />
+    <button class="bg-indigo-500 rounded-md text-white py-3 px-8" id="merge-button" disabled>Chirpify!</button>
     <br/>
-    <button id="download-button" style="display:none;">Download Merged Video</button>
-    <video id="output-video" controls></video><br/>
+    <button class="bg-indigo-500 rounded-md text-white py-3 px-8 mb-4" id="download-button" style="display:none;">Download Video</button>
+    <video id="output-video" controls style="display:none;"></video><br/>
     <p id="message"></p>
     <script>
       const { fetchFile } = FFmpegUtil;
@@ -43,7 +55,7 @@
         if (!selectedVideo) return;
 
         const message = document.getElementById('message');
-        message.innerHTML = 'Loading FFmpeg...';
+        message.innerHTML = 'Loading...';
         await loadFFmpeg();
 
         const videoFileName = 'input.mp4';
@@ -69,24 +81,25 @@
         const data = await ffmpeg.readFile(outputFileName);
 
         const video = document.getElementById('output-video');
-    const downloadButton = document.getElementById('download-button');
-    const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
-    const videoUrl = URL.createObjectURL(videoBlob);
-    
-    video.src = videoUrl;
-    downloadButton.href = videoUrl;
-    downloadButton.download = 'merged_video.mp4';
-    downloadButton.style.display = 'inline';
-    downloadButton.addEventListener('click', () => {
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = videoUrl;
-      a.download = 'merged_video.mp4';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    });
-    message.innerHTML = ''; // Merging complete!
+        const downloadButton = document.getElementById('download-button');
+        const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
+        const videoUrl = URL.createObjectURL(videoBlob);
+        
+        video.src = videoUrl;
+        video.style.display = 'block';
+        downloadButton.href = videoUrl;
+        downloadButton.download = 'merged_video.mp4';
+        downloadButton.style.display = 'inline';
+        downloadButton.addEventListener('click', () => {
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = videoUrl;
+          a.download = 'merged_video.mp4';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        });
+        message.innerHTML = ''; // Merging complete!
       };
 
       document.getElementById('video-uploader').addEventListener('change', onFileChange);
